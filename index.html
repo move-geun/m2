@@ -4,8 +4,6 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>프롬프트 빌더</title>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
     <style>
       * {
         margin: 0;
@@ -233,6 +231,43 @@
         font-size: 12px;
         margin-top: 10px;
       }
+
+      .product-image-card {
+        background: white;
+        border-radius: 8px;
+        padding: 8px;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        transition: transform 0.2s, box-shadow 0.2s;
+        cursor: pointer;
+      }
+
+      .product-image-card:hover {
+        transform: translateY(-4px);
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+      }
+
+      .product-image-card img {
+        width: 100%;
+        height: 150px;
+        object-fit: contain;
+        border-radius: 4px;
+        background: #f8f9fa;
+      }
+
+      .product-image-label {
+        text-align: center;
+        margin-top: 8px;
+        font-size: 12px;
+        font-weight: 600;
+        color: #555;
+      }
+
+      .product-image-subtype {
+        text-align: center;
+        font-size: 11px;
+        color: #888;
+        margin-top: 2px;
+      }
     </style>
   </head>
   <body>
@@ -263,16 +298,23 @@
           <div id="productInfo" class="product-info hidden">
             <strong>제품 정보:</strong>
             <div id="productList"></div>
-            <button
-              class="btn"
-              onclick="downloadImages()"
-              style="background: #28a745; margin-top: 10px"
+          </div>
+
+          <div
+            id="productImages"
+            class="product-info hidden"
+            style="margin-top: 15px"
+          >
+            <strong style="display: block; margin-bottom: 10px; color: #856404"
+              >제품 이미지 (클릭하면 새 탭에서 원본 열림):</strong
             >
-              💾 제품 이미지 다운로드
-            </button>
             <div
-              id="downloadStatus"
-              style="margin-top: 10px; font-size: 12px"
+              id="imageGrid"
+              style="
+                display: grid;
+                grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+                gap: 10px;
+              "
             ></div>
           </div>
         </div>
@@ -392,7 +434,7 @@
             readonly
             placeholder="생성된 프롬프트가 여기에 표시됩니다..."
           ></textarea>
-          <button class="btn copy-btn" onclick="copyPrompt()">
+          <button class="btn copy-btn" onclick="copyPrompt(event)">
             📋 클립보드에 복사
           </button>
         </div>
@@ -641,6 +683,8 @@ Lighting: soft daylight (~5500K). No text, watermark, or additional people.`;
         const products = data.products || {};
         const productInfoDiv = document.getElementById("productInfo");
         const productListDiv = document.getElementById("productList");
+        const productImagesDiv = document.getElementById("productImages");
+        const imageGridDiv = document.getElementById("imageGrid");
 
         if (
           !products ||
@@ -648,10 +692,12 @@ Lighting: soft daylight (~5500K). No text, watermark, or additional people.`;
           (typeof products === "object" && Object.keys(products).length === 0)
         ) {
           productInfoDiv.classList.add("hidden");
+          productImagesDiv.classList.add("hidden");
           return;
         }
 
         let productList = [];
+        let imageCards = [];
 
         // products가 리스트인 경우
         if (Array.isArray(products)) {
@@ -659,6 +705,17 @@ Lighting: soft daylight (~5500K). No text, watermark, or additional people.`;
             if (product.type && product.sub_type) {
               const fit = product.fit ? ` (${product.fit})` : "";
               productList.push(`${product.type}: ${product.sub_type}${fit}`);
+
+              // 이미지 카드 생성
+              if (product.image_url) {
+                imageCards.push(
+                  createImageCard(
+                    product.image_url,
+                    product.type,
+                    product.sub_type
+                  )
+                );
+              }
             }
           });
         }
@@ -670,6 +727,17 @@ Lighting: soft daylight (~5500K). No text, watermark, or additional people.`;
               productList.push(
                 `${key.toUpperCase()}: ${product.sub_type}${fit}`
               );
+
+              // 이미지 카드 생성
+              if (product.image_url) {
+                imageCards.push(
+                  createImageCard(
+                    product.image_url,
+                    key.toUpperCase(),
+                    product.sub_type
+                  )
+                );
+              }
             }
           });
         }
@@ -682,6 +750,25 @@ Lighting: soft daylight (~5500K). No text, watermark, or additional people.`;
         } else {
           productInfoDiv.classList.add("hidden");
         }
+
+        // 이미지 그리드 표시
+        if (imageCards.length > 0) {
+          imageGridDiv.innerHTML = imageCards.join("");
+          productImagesDiv.classList.remove("hidden");
+        } else {
+          productImagesDiv.classList.add("hidden");
+        }
+      }
+
+      // 이미지 카드 HTML 생성
+      function createImageCard(imageUrl, type, subType) {
+        return `
+          <div class="product-image-card" onclick="window.open('${imageUrl}', '_blank')">
+            <img src="${imageUrl}" alt="${type} - ${subType}" loading="lazy">
+            <div class="product-image-label">${type}</div>
+            <div class="product-image-subtype">${subType}</div>
+          </div>
+        `;
       }
 
       // 프롬프트 모드 변경 시 UI 업데이트
@@ -1052,141 +1139,8 @@ Note: The images above show ${productCount} products from multiple angles. Each 
         showStatus("success", "✓ 프롬프트 생성 완료!");
       };
 
-      // 이미지 다운로드 (ZIP으로 묶어서)
-      window.downloadImages = async function () {
-        if (!jsonData || !jsonData.products) {
-          alert("제품 정보가 없습니다. 먼저 JSON을 파싱하세요.");
-          return;
-        }
-
-        const statusDiv = document.getElementById("downloadStatus");
-        const products = Array.isArray(jsonData.products)
-          ? jsonData.products
-          : Object.values(jsonData.products);
-
-        if (products.length === 0) {
-          alert("다운로드할 제품 이미지가 없습니다.");
-          return;
-        }
-
-        statusDiv.innerHTML = "⏳ 이미지 다운로드 중...";
-
-        const zip = new JSZip();
-        let successCount = 0;
-        let failCount = 0;
-        const errors = [];
-
-        for (let i = 0; i < products.length; i++) {
-          const product = products[i];
-          const imageUrl = product.image_url;
-
-          if (!imageUrl) {
-            failCount++;
-            errors.push(`제품 ${i + 1}: 이미지 URL 없음`);
-            continue;
-          }
-
-          try {
-            // 파일명 생성
-            const productType = product.type || "product";
-            const typeId = product.type_id || i;
-            const fileExtension =
-              imageUrl.split(".").pop().split("?")[0] || "jpg";
-            const fileName = `${jsonData.style_id}_${productType}_${typeId}.${fileExtension}`;
-
-            statusDiv.innerHTML = `⏳ 다운로드 중... ${i + 1}/${
-              products.length
-            } (${productType})`;
-
-            // Canvas를 통해 이미지를 Blob으로 변환
-            const blob = await loadImageAsBlob(imageUrl);
-
-            // ZIP에 추가
-            zip.file(fileName, blob);
-            successCount++;
-
-            console.log(`✓ 다운로드 성공: ${fileName}`);
-          } catch (error) {
-            console.error(`이미지 다운로드 실패: ${imageUrl}`, error);
-            errors.push(`${product.type || "제품"}: ${error.message}`);
-            failCount++;
-          }
-        }
-
-        // ZIP 파일 생성 및 다운로드
-        if (successCount > 0) {
-          try {
-            statusDiv.innerHTML = "⏳ ZIP 파일 생성 중...";
-            const zipBlob = await zip.generateAsync({ type: "blob" });
-            const zipFileName = `${jsonData.style_id}_products.zip`;
-
-            // FileSaver.js로 다운로드
-            saveAs(zipBlob, zipFileName);
-
-            // 완료 메시지
-            if (failCount === 0) {
-              statusDiv.innerHTML = `✅ ${successCount}개 이미지를 ZIP으로 다운로드 완료!`;
-            } else {
-              statusDiv.innerHTML = `⚠️ ${successCount}개 성공, ${failCount}개 실패<br><small>${errors.join(
-                ", "
-              )}</small>`;
-            }
-          } catch (error) {
-            statusDiv.innerHTML = `❌ ZIP 생성 실패: ${error.message}`;
-          }
-        } else {
-          statusDiv.innerHTML = `❌ 모든 다운로드 실패<br><small>${errors.join(
-            "<br>"
-          )}</small>`;
-        }
-      };
-
-      // Canvas를 통해 이미지를 Blob으로 변환하는 헬퍼 함수
-      async function loadImageAsBlob(imageUrl) {
-        return new Promise((resolve, reject) => {
-          const img = new Image();
-          img.crossOrigin = "anonymous";
-
-          img.onload = function () {
-            try {
-              const canvas = document.createElement("canvas");
-              canvas.width = img.naturalWidth || img.width;
-              canvas.height = img.naturalHeight || img.height;
-
-              const ctx = canvas.getContext("2d");
-              ctx.drawImage(img, 0, 0);
-
-              canvas.toBlob(
-                function (blob) {
-                  if (blob) {
-                    resolve(blob);
-                  } else {
-                    reject(new Error("Canvas to Blob 변환 실패"));
-                  }
-                },
-                "image/jpeg",
-                0.95
-              );
-            } catch (error) {
-              reject(error);
-            }
-          };
-
-          img.onerror = function (e) {
-            console.error("이미지 로드 실패:", imageUrl, e);
-            reject(new Error("이미지 로드 실패 (CORS 또는 네트워크 오류)"));
-          };
-
-          // CORS 우회를 위한 타임스탬프 추가
-          const url = imageUrl.includes("?")
-            ? `${imageUrl}&_t=${Date.now()}`
-            : `${imageUrl}?_t=${Date.now()}`;
-          img.src = url;
-        });
-      }
-
       // 클립보드에 복사
-      window.copyPrompt = function () {
+      window.copyPrompt = function (event) {
         const textarea = document.getElementById("resultPrompt");
         const text = textarea.value.trim();
 
@@ -1199,7 +1153,9 @@ Note: The images above show ${productCount} products from multiple angles. Each 
           navigator.clipboard
             .writeText(text)
             .then(() => {
-              const btn = event.target;
+              const btn = event
+                ? event.target
+                : document.querySelector(".copy-btn");
               const originalText = btn.textContent;
               btn.textContent = "✓ 복사 완료!";
               btn.classList.add("copied");
