@@ -1,0 +1,1081 @@
+<!DOCTYPE html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>프롬프트 빌더</title>
+    <style>
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+
+      body {
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+          Oxygen, Ubuntu, Cantarell, sans-serif;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        min-height: 100vh;
+        padding: 20px;
+      }
+
+      .container {
+        max-width: 1400px;
+        margin: 0 auto;
+        background: white;
+        border-radius: 12px;
+        box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+        overflow: hidden;
+      }
+
+      .header {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        padding: 30px;
+        text-align: center;
+      }
+
+      .header h1 {
+        font-size: 2em;
+        margin-bottom: 10px;
+      }
+
+      .content {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 20px;
+        padding: 30px;
+      }
+
+      @media (max-width: 1024px) {
+        .content {
+          grid-template-columns: 1fr;
+        }
+      }
+
+      .panel {
+        background: #f8f9fa;
+        border-radius: 8px;
+        padding: 20px;
+      }
+
+      .panel h2 {
+        color: #333;
+        margin-bottom: 20px;
+        font-size: 1.3em;
+        border-bottom: 2px solid #667eea;
+        padding-bottom: 10px;
+      }
+
+      .form-group {
+        margin-bottom: 20px;
+      }
+
+      .form-group label {
+        display: block;
+        margin-bottom: 8px;
+        color: #555;
+        font-weight: 500;
+      }
+
+      .form-group select,
+      .form-group input,
+      .form-group textarea {
+        width: 100%;
+        padding: 10px;
+        border: 2px solid #ddd;
+        border-radius: 6px;
+        font-size: 14px;
+        transition: border-color 0.3s;
+      }
+
+      .form-group select:focus,
+      .form-group input:focus,
+      .form-group textarea:focus {
+        outline: none;
+        border-color: #667eea;
+      }
+
+      .form-group input[type="number"] {
+        width: 100px;
+      }
+
+      .form-group input[type="file"] {
+        padding: 8px;
+      }
+
+      .checkbox-group {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+      }
+
+      .checkbox-group input[type="checkbox"] {
+        width: auto;
+      }
+
+      .btn {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        border: none;
+        padding: 12px 30px;
+        border-radius: 6px;
+        font-size: 16px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: transform 0.2s, box-shadow 0.2s;
+        width: 100%;
+        margin-top: 10px;
+      }
+
+      .btn:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+      }
+
+      .btn:active {
+        transform: translateY(0);
+      }
+
+      .btn:disabled {
+        opacity: 0.6;
+        cursor: not-allowed;
+        transform: none;
+      }
+
+      .result-panel {
+        grid-column: 1 / -1;
+      }
+
+      .result-textarea {
+        width: 100%;
+        min-height: 500px;
+        padding: 15px;
+        border: 2px solid #ddd;
+        border-radius: 6px;
+        font-family: "Courier New", monospace;
+        font-size: 13px;
+        line-height: 1.6;
+        resize: vertical;
+        background: #fff;
+      }
+
+      .result-textarea:focus {
+        outline: none;
+        border-color: #667eea;
+      }
+
+      .copy-btn {
+        background: #28a745;
+        margin-top: 10px;
+      }
+
+      .copy-btn:hover {
+        box-shadow: 0 5px 15px rgba(40, 167, 69, 0.4);
+      }
+
+      .copy-btn.copied {
+        background: #155724;
+      }
+
+      .info {
+        background: #e7f3ff;
+        border-left: 4px solid #2196f3;
+        padding: 12px;
+        margin-bottom: 15px;
+        border-radius: 4px;
+        font-size: 14px;
+        color: #1976d2;
+      }
+
+      .product-info {
+        background: #fff3cd;
+        border-left: 4px solid #ffc107;
+        padding: 12px;
+        margin-bottom: 15px;
+        border-radius: 4px;
+        font-size: 14px;
+        color: #856404;
+      }
+
+      .status {
+        margin-top: 10px;
+        padding: 10px;
+        border-radius: 6px;
+        font-size: 14px;
+      }
+
+      .status.success {
+        background: #d4edda;
+        color: #155724;
+        border: 1px solid #c3e6cb;
+      }
+
+      .status.error {
+        background: #f8d7da;
+        color: #721c24;
+        border: 1px solid #f5c6cb;
+      }
+
+      .hidden {
+        display: none;
+      }
+
+      .json-preview {
+        max-height: 200px;
+        overflow-y: auto;
+        background: #f8f9fa;
+        padding: 10px;
+        border-radius: 4px;
+        font-family: "Courier New", monospace;
+        font-size: 12px;
+        margin-top: 10px;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <div class="header">
+        <h1>🎨 프롬프트 빌더</h1>
+        <p>이미지 생성용 프롬프트 조합 도구</p>
+      </div>
+
+      <div class="content">
+        <div class="panel">
+          <h2>📋 JSON 입력</h2>
+
+          <div class="form-group">
+            <label>스타일 JSON (선택사항 - 복사하여 붙여넣기)</label>
+            <textarea
+              id="jsonInput"
+              rows="8"
+              placeholder='{"style_id": "7155", "products": [...]}'
+              style="font-family: 'Courier New', monospace; font-size: 12px"
+            ></textarea>
+          </div>
+
+          <button class="btn" onclick="parseJson()" style="background: #007bff">
+            📥 JSON 파싱
+          </button>
+
+          <div id="productInfo" class="product-info hidden">
+            <strong>제품 정보:</strong>
+            <div id="productList"></div>
+          </div>
+        </div>
+
+        <div class="panel">
+          <h2>⚙️ 프롬프트 설정</h2>
+
+          <div class="form-group">
+            <label>프롬프트 모드</label>
+            <select id="promptMode">
+              <option value="separate">Separate (배경+행동 따로)</option>
+              <option value="combined">Combined (합쳐진 프롬프트)</option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label>촬영 구도</label>
+            <select id="shotType">
+              <option value="full_body">전신샷 (Full Body)</option>
+              <option value="below_knee">무릎 아래 (Below Knee)</option>
+              <option value="above_knee">무릎 위 (Above Knee)</option>
+              <option value="random">랜덤</option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label>외모 프롬프트</label>
+            <div class="checkbox-group">
+              <input type="checkbox" id="appearanceRandom" checked />
+              <label for="appearanceRandom" style="margin: 0">랜덤</label>
+            </div>
+            <input
+              type="number"
+              id="appearanceIndex"
+              min="0"
+              placeholder="인덱스 (0부터)"
+              disabled
+            />
+          </div>
+
+          <div id="separateModeSettings">
+            <div class="form-group">
+              <label>배경 타입</label>
+              <select id="backgroundType">
+                <option value="">랜덤</option>
+                <option value="indoor">실내 (Indoor)</option>
+                <option value="outdoor">실외 (Outdoor)</option>
+              </select>
+            </div>
+
+            <div class="form-group">
+              <label>배경 프롬프트</label>
+              <div class="checkbox-group">
+                <input type="checkbox" id="backgroundRandom" checked />
+                <label for="backgroundRandom" style="margin: 0">랜덤</label>
+              </div>
+              <input
+                type="number"
+                id="backgroundIndex"
+                min="0"
+                placeholder="인덱스 (0부터)"
+                disabled
+              />
+            </div>
+
+            <div class="form-group">
+              <label>행동 프롬프트</label>
+              <div class="checkbox-group">
+                <input type="checkbox" id="actionRandom" checked />
+                <label for="actionRandom" style="margin: 0">랜덤</label>
+              </div>
+              <input
+                type="number"
+                id="actionIndex"
+                min="0"
+                placeholder="인덱스 (0부터)"
+                disabled
+              />
+            </div>
+          </div>
+
+          <div id="combinedModeSettings" class="hidden">
+            <div class="form-group">
+              <label>합쳐진 프롬프트</label>
+              <div class="checkbox-group">
+                <input type="checkbox" id="combinedRandom" checked />
+                <label for="combinedRandom" style="margin: 0">랜덤</label>
+              </div>
+              <input
+                type="number"
+                id="combinedIndex"
+                min="0"
+                placeholder="인덱스 (0부터)"
+                disabled
+              />
+            </div>
+          </div>
+
+          <button class="btn" id="generateBtn" onclick="generatePrompt()">
+            ✨ 프롬프트 생성
+          </button>
+          <div id="status" class="status hidden"></div>
+        </div>
+
+        <div class="panel">
+          <h2>📊 프롬프트 정보</h2>
+          <div id="promptInfo" class="info">
+            프롬프트를 생성하면 여기에 정보가 표시됩니다.
+          </div>
+        </div>
+
+        <div class="panel result-panel">
+          <h2>📝 생성된 프롬프트</h2>
+          <textarea
+            id="resultPrompt"
+            class="result-textarea"
+            readonly
+            placeholder="생성된 프롬프트가 여기에 표시됩니다..."
+          ></textarea>
+          <button class="btn copy-btn" onclick="copyPrompt()">
+            📋 클립보드에 복사
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      // 프롬프트 데이터 (인라인 포함 - CORS 문제 해결)
+      const promptData = {
+        appearances: [
+          "Ultra-photorealistic portrait of a **handsome 30-something Korean male** with a balanced, symmetrical face, straight black hair styled naturally down, and fair-to-neutral skin tone.\nTall and lean body proportions (long legs, realistic ratio) \nHis jawline is defined but soft, with clear eyes and neat brows giving a **modern, urban charm.**\nfair neutral Korean skin tone with slight cool undertone (no tan)\ndistinct Korean male facial features — straight nose bridge, balanced cheekbones, clean jawline\nKorean hair texture with soft natural volume",
+          "Ultra-photorealistic image of a **friendly-looking Korean male in his 30s**, with warm beige skin, soft brown eyes, and gentle facial lines.\nTall and lean body proportions (long legs, realistic ratio) \nHis hair is slightly tousled, and his expression conveys **kindness and approachability.**\nfair neutral Korean skin tone with slight cool undertone (no tan)\ndistinct Korean male facial features — straight nose bridge, balanced cheekbones, clean jawline\nKorean hair texture with soft natural volume",
+          "Ultra-photorealistic portrait of a **gentle Korean male in his 30s** with natural features, slightly wavy black hair, and a soft, warm smile.\nTall and lean body proportions (long legs, realistic ratio) \nHis eyes appear kind and calm, exuding **a sincere, trustworthy aura.**\nfair neutral Korean skin tone with slight cool undertone (no tan)\ndistinct Korean male facial features — straight nose bridge, balanced cheekbones, clean jawline\nKorean hair texture with soft natural volume",
+          "Ultra-photorealistic portrait of a **cool and refined Korean male** with sharp facial structure, pale beige skin tone, and sleek black hair brushed back neatly.\nTall and lean body proportions (long legs, realistic ratio) \nHis expression is composed and serious, embodying **a sophisticated, elegant vibe.**\nfair neutral Korean skin tone with slight cool undertone (no tan)\ndistinct Korean male facial features — straight nose bridge, balanced cheekbones, clean jawline\nKorean hair texture with soft natural volume",
+          "Ultra-photorealistic portrait of a **charming Korean male in his late 20s to early 30s**, with slightly messy dark hair, clean skin, and expressive eyes.\nTall and lean body proportions (long legs, realistic ratio) \nHis relaxed facial expression and casual energy give off **a natural, trendy look.**\nfair neutral Korean skin tone with slight cool undertone (no tan)\ndistinct Korean male facial features — straight nose bridge, balanced cheekbones, clean jawline\nKorean hair texture with soft natural volume",
+          "Ultra-photorealistic image of a **professional-looking Korean male in his 30s**, with short neatly styled hair, clear complexion, and intelligent expression.\nTall and lean body proportions (long legs, realistic ratio) \nHis face radiates **confidence and reliability**, resembling a polished office professional.\nfair neutral Korean skin tone with slight cool undertone (no tan)\ndistinct Korean male facial features — straight nose bridge, balanced cheekbones, clean jawline\nKorean hair texture with soft natural volume",
+          "Ultra-photorealistic portrait of a handsome and fit Korean male in his 30s, with clear fair skin, short textured hair, and defined facial contours.\nTall and lean body proportions (long legs, realistic ratio).\nHis sharp jawline and cheekbones express energy, discipline, and strength.\nfair neutral Korean skin tone with slight cool undertone (no tan)\ndistinct Korean male facial features — straight nose bridge, balanced cheekbones, clean jawline\nKorean hair texture with soft natural volume",
+          "Ultra-photorealistic portrait of a handsome, charming yet calm Korean male, fair skin with slight warmth, dark brown hair parted naturally, and a soft, gentle gaze.\nTall and lean body proportions (long legs, realistic ratio).\nHis facial balance expresses both charisma and emotional depth.\nfair neutral Korean skin tone with slight cool undertone (no tan)\ndistinct Korean male facial features — straight nose bridge, balanced cheekbones, clean jawline\nKorean hair texture with soft natural volume",
+          "Ultra-photorealistic portrait of a charming yet calm Korean male, fair skin with slight warmth, dark brown hair naturally down over the forehead, and a soft, intelligent gaze behind thin, modern metal-frame glasses.\nTall and lean body proportions (long legs, realistic ratio)\nHis facial balance expresses both charisma and quiet intellectual depth.\nfair neutral Korean skin tone with slight cool undertone (no tan)\ndistinct Korean male facial features — straight nose bridge, balanced cheekbones, clean jawline\nKorean hair texture with soft natural volume",
+        ],
+        indoorPrompts: [
+          "Ultra-photorealistic indoor photo of a Korean male model seated beside a large café window with soft daylight reflecting off a terrazzo floor.\nHe sits fully and comfortably on the chair, hips positioned toward the backrest, maintaining a natural, relaxed posture without any exaggerated posing.\nHe is placed within a modern café interior, avoiding wooden or overly rustic furniture that disrupts the clean aesthetic.\nCamera angle: slightly low three-quarter side view at mid-torso height using an 85mm lens for balanced proportions and natural depth.\nLighting: natural sunlight (~5400 K) filtered through sheer linen curtains, creating soft, even highlights on face and clothing.\nCaptured with a Nikon D850 and 85mm f/1.4 lens at ISO 100, daylight 5500 K, ultra-high-resolution (8K) look.\nSharp micro-detail on fabric and skin; realistic lighting, texture fidelity.\nBackground: the entire café interior is rendered fully sharp with no blur — all furniture, textures, shelves, walls, and design elements appear crisp and clearly detailed with full wide-depth focus.\nTone: serene, editorial, and realistic — a calm emotional atmosphere.\nFurniture Color & Material Rule:\nDo NOT generate wooden furniture of any kind — no wooden chairs, wooden tables, wooden shelves, wooden bar counters, or wooden accents.\nExclude all warm wood tones (light brown, dark brown, walnut, oak, pine).\nAll furniture and décor must follow the lounge’s premium palette:\n- brushed metal frames (matte black, brass, or silver)\n- upholstered fabric or velvet seating (dark gray, charcoal, deep beige, muted taupe)\n- polished composite or solid-colored stone tables (smooth surfaces without terrazzo patterns)\n- minimalistic glass or brass accents\n- no rustic textures, no wooden grains, no brown tones, no terrazzo patterns\nAny element that visually resembles wood or terrazzo must NOT appear in the scene.",
+          "Ultra-photorealistic indoor lifestyle photo of model sitting at a light stone café table, with an open laptop or book placed in front of him.\nHe sits fully and comfortably on the chair, hips toward the backrest — not perched or leaning forward.\nHe is seated on a modern upholstered chair that visually harmonizes with the space; not wooden or rustic.\nHe never sits on the table or desk — posture is relaxed and proportionate, showing a focused yet calm presence.\nCamera captures from a slightly elevated diagonal angle (~chest level) for natural body ratio and realistic composition.\nLighting: warm daylight (~5300 K) through the window, realistic reflections on table and glass surfaces.\nCaptured with a Nikon D850 and 85mm f/1.4 lens at ISO 100, daylight 5500 K, ultra-high-resolution (8K) look.\nSharp micro-detail on fabric and skin; realistic lighting, texture fidelity.\nBackground: pastel plaster wall and interior elements rendered fully sharp with no blur — all wall textures, shadows, edges, and objects appear crisp and clearly defined.\nMood: intimate, natural, and emotionally grounded — like a quiet moment of focus in daily life.\nFurniture Color & Material Rule:\nDo NOT generate wooden furniture of any kind — no wooden chairs, wooden tables, wooden shelves, wooden bar counters, or wooden accents.\nExclude all warm wood tones (light brown, dark brown, walnut, oak, pine).\nAll furniture and décor must follow the lounge’s premium palette:\n- brushed metal frames (matte black, brass, or silver)\n- upholstered fabric or velvet seating (dark gray, charcoal, deep beige, muted taupe)\n- polished composite or solid-colored stone tables (smooth surfaces without terrazzo patterns)\n- minimalistic glass or brass accents\n- no rustic textures, no wooden grains, no brown tones, no terrazzo patterns\nAny element that visually resembles wood or terrazzo must NOT appear in the scene.",
+          "Ultra-photorealistic indoor photograph of model sitting at a window counter in a bright café with concrete floor and light fabric curtains.\nHe sits fully on the stool, posture stable and natural — not perched or leaning forward.\nHe sits comfortably on a counter-height stool with modern neutral design — not wooden.\nHe never sits on the counter or places feet on furniture.\nCamera: three-quarter profile angle at mid-torso height to maintain realistic proportions.\nLighting: soft neutral daylight (~5400 K) forming natural shadow layers across the counter.\nCaptured with a Nikon D850 and 85mm f/1.4 lens at ISO 100, daylight 5500 K, ultra-high-resolution (8K) look.\nSharp micro-detail on fabric and skin; realistic lighting, texture fidelity.\nBackground: all interior surfaces, muted walls, shelves, and décor elements are fully sharp with no blur — rendered with complete depth clarity.\nTone: peaceful, tactile, and warm — like a candid morning editorial.\nFurniture Color & Material Rule:\nDo NOT generate wooden furniture of any kind — no wooden chairs, wooden tables, wooden shelves, wooden bar counters, or wooden accents.\nExclude all warm wood tones (light brown, dark brown, walnut, oak, pine).\nAll furniture and décor must follow the lounge’s premium palette:\n- brushed metal frames (matte black, brass, or silver)\n- upholstered fabric or velvet seating (dark gray, charcoal, deep beige, muted taupe)\n- polished composite or solid-colored stone tables (smooth surfaces without terrazzo patterns)\n- minimalistic glass or brass accents\n- no rustic textures, no wooden grains, no brown tones, no terrazzo patterns\nAny element that visually resembles wood or terrazzo must NOT appear in the scene.",
+          "Ultra-photorealistic indoor night photograph of model sitting beside a large window with faint Seoul city lights visible outside.\nLighting: soft ambient illumination (~3500–3800 K) combined with gentle reflections from outside streetlights; balanced highlight on face and fabric texture.\nCaptured with a Nikon D850 and 85mm f/1.4 lens at ISO 400, f/1.8, ultra-high-resolution (8K) look.\nSharp micro-detail on fabric and skin; natural low-light realism.\nBackground: both the interior and the city lights outside are rendered fully sharp with no blur — clear architectural lines, window reflections, and details are preserved naturally.\nTone: cinematic, intimate, and sophisticated — emotional nighttime realism.\nactions: Model seated near the window, posture upright but relaxed, gazing toward the city view.\nFurniture Color & Material Rule:\nDo NOT generate wooden furniture of any kind — no wooden chairs, wooden tables, wooden shelves, wooden bar counters, or wooden accents.\nExclude all warm wood tones (light brown, dark brown, walnut, oak, pine).\nAll furniture and décor must follow the lounge’s premium palette:\n- brushed metal frames (matte black, brass, or silver)\n- upholstered fabric or velvet seating (dark gray, charcoal, deep beige, muted taupe)\n- polished composite or solid-colored stone tables (smooth surfaces without terrazzo patterns)\n- minimalistic glass or brass accents\n- no rustic textures, no wooden grains, no brown tones, no terrazzo patterns\nAny element that visually resembles wood or terrazzo must NOT appear in the scene.",
+          "Ultra-photorealistic indoor photo of model sitting naturally in a warm-toned café interior with soft ambient lighting reflecting subtly off a polished terrazzo floor.\nHe sits fully and comfortably on the chair, hips positioned toward the backrest — not perched or leaning forward.\nHe is seated on a modern upholstered chair that complements the interior — never wooden, overly rustic, or mismatched in style.\nPosture: relaxed but upright, both hands resting naturally on his lap.\nCamera angle: slightly low three-quarter side view at mid-torso height using an 85mm lens for balanced proportions and natural depth.\nLighting: soft diffused ambient lighting (~4000–4500 K).\nCaptured with a Nikon D850 and 85mm f/1.4 lens at ISO 100, ultra-high-resolution (8K) look.\nSharp micro-detail on fabric and skin; realistic lighting, texture fidelity.\nBackground: the entire café interior — shelves, pendant lights, walls, and décor — appears fully sharp with no blur; all details are crisp and natural.\nTone: serene, editorial, warm.\nFurniture Color & Material Rule:\nDo NOT generate wooden furniture of any kind — no wooden chairs, wooden tables, wooden shelves, wooden bar counters, or wooden accents.\nExclude all warm wood tones (light brown, dark brown, walnut, oak, pine).\nAll furniture and décor must follow the lounge’s premium palette:\n- brushed metal frames (matte black, brass, or silver)\n- upholstered fabric or velvet seating (dark gray, charcoal, deep beige, muted taupe)\n- polished composite or solid-colored stone tables (smooth surfaces without terrazzo patterns)\n- minimalistic glass or brass accents\n- no rustic textures, no wooden grains, no brown tones, no terrazzo patterns\nAny element that visually resembles wood or terrazzo must NOT appear in the scene.",
+          "Ultra-photorealistic indoor lifestyle photo of model sitting at a light stone café table with an open laptop or book placed in front of him.\nHe sits fully and comfortably on the chair; posture relaxed and steady.\nCamera captures from a slightly elevated diagonal angle.\nLighting: soft ambient warm-white (~3800–4200 K).\nCaptured with a Nikon D850 and 85mm f/1.4 lens, ISO 100.\nSharp micro-detail on fabric and skin.\nBackground: pendant lights, furniture, textures, and interior details are all rendered fully sharp with no blur — maintaining full depth clarity.\nMood: natural and intimate.\nFurniture Color & Material Rule:\nDo NOT generate wooden furniture of any kind — no wooden chairs, wooden tables, wooden shelves, wooden bar counters, or wooden accents.\nExclude all warm wood tones (light brown, dark brown, walnut, oak, pine).\nAll furniture and décor must follow the lounge’s premium palette:\n- brushed metal frames (matte black, brass, or silver)\n- upholstered fabric or velvet seating (dark gray, charcoal, deep beige, muted taupe)\n- polished composite or solid-colored stone tables (smooth surfaces without terrazzo patterns)\n- minimalistic glass or brass accents\n- no rustic textures, no wooden grains, no brown tones, no terrazzo patterns\nAny element that visually resembles wood or terrazzo must NOT appear in the scene.",
+          "Ultra-photorealistic indoor photograph of model sitting at a counter-height seat inside a warm modern lounge with indirect ceiling lighting.\nHe sits fully, posture balanced and natural.\nCamera: three-quarter profile angle.\nLighting: soft indirect ceiling lights (~4000 K).\nCaptured with Nikon D850 + 85mm f/1.4, ISO 100.\nSharp micro-detail.\nBackground: lounge walls, brass accents, furniture shapes — all fully sharp with no blur; complete depth of field.\nTone: peaceful, refined.\nFurniture Color & Material Rule:\nDo NOT generate wooden furniture of any kind — no wooden chairs, wooden tables, wooden shelves, wooden bar counters, or wooden accents.\nExclude all warm wood tones (light brown, dark brown, walnut, oak, pine).\nAll furniture and décor must follow the lounge’s premium palette:\n- brushed metal frames (matte black, brass, or silver)\n- upholstered fabric or velvet seating (dark gray, charcoal, deep beige, muted taupe)\n- polished composite or solid-colored stone tables (smooth surfaces without terrazzo patterns)\n- minimalistic glass or brass accents\n- no rustic textures, no wooden grains, no brown tones, no terrazzo patterns\nAny element that visually resembles wood or terrazzo must NOT appear in the scene.",
+          "Ultra-photorealistic indoor night photograph of model in a softly illuminated hotel lounge.\nLighting: ambient warm light (~3500–3800 K).\nCaptured with Nikon D850, ISO 400.\nSharp micro-detail.\nBackground: wall sconces, textures, and interior architecture appear fully sharp with no blur — clear detail throughout.\nTone: cinematic and intimate.\nactions: calm seated posture.\nFurniture Color & Material Rule:\nDo NOT generate wooden furniture of any kind — no wooden chairs, wooden tables, wooden shelves, wooden bar counters, or wooden accents.\nExclude all warm wood tones (light brown, dark brown, walnut, oak, pine).\nAll furniture and décor must follow the lounge’s premium palette:\n- brushed metal frames (matte black, brass, or silver)\n- upholstered fabric or velvet seating (dark gray, charcoal, deep beige, muted taupe)\n- polished composite or solid-colored stone tables (smooth surfaces without terrazzo patterns)\n- minimalistic glass or brass accents\n- no rustic textures, no wooden grains, no brown tones, no terrazzo patterns\nAny element that visually resembles wood or terrazzo must NOT appear in the scene.",
+          "Ultra-photorealistic indoor portrait of the model inside a modern office lounge with a soft warm-neutral atmosphere.\nHe sits in a relaxed, balanced posture on a modern upholstered chair (not wooden).\nLighting: soft warm-neutral indoor (~4300–4700 K) that avoids cold tones while maintaining clean clarity, with gentle directional highlights adding depth to facial contours and fabric texture.\nCaptured with a Nikon D850 and 85mm f/1.4 lens, ISO 100, ultra-high-resolution.\nBackground includes muted gray-beige wall panels, a low lounge table with one minimal neutral object (a closed book or a simple glass), and subtle modern fabric textures — all rendered fully sharp with full-depth clarity and no blur.\nModel lightly adjusts his sleeve or rests one hand on the armrest for natural movement.\nTone: modern, balanced, and warm-neutral — not cold, not overly warm, clean professional office realism.\nFurniture Color & Material Rule:\nDo NOT generate wooden furniture of any kind — no wooden chairs, wooden tables, wooden shelves, wooden bar counters, or wooden accents.\nExclude all warm wood tones (light brown, dark brown, walnut, oak, pine).\nAll furniture and décor must follow the lounge’s premium palette:\n- brushed metal frames (matte black, brass, or silver)\n- upholstered fabric or velvet seating (dark gray, charcoal, deep beige, muted taupe)\n- polished composite or solid-colored stone tables (smooth surfaces without terrazzo patterns)\n- minimalistic glass or brass accents\n- no rustic textures, no wooden grains, no brown tones, no terrazzo patterns\nAny element that visually resembles wood or terrazzo must NOT appear in the scene.",
+          "Ultra-photorealistic indoor daylight photo of a Korean male model standing casually inside a modern office pantry with soft warm-white lighting reflecting lightly off smooth cabinet surfaces.\nHe stands in a natural, relaxed posture — balanced weight distribution, no exaggerated posing, one hand resting at his side or lightly holding a plain ceramic mug.\nHe is placed within a realistic corporate pantry interior, including practical elements that match an actual office setting while maintaining a clean visual tone.\nCamera angle: slightly diagonal view at mid-torso height using an 85mm lens for balanced proportions and natural depth.\nLighting: warm-white indoor illumination (~3800–4300 K) mixed with subtle daylight reflections from the office corridor, creating soft, even highlights on his face and clothing.\nCaptured with a Nikon D850 and 85mm f/1.4 lens at ISO 100, ultra-high-resolution (8K) look.\nSharp micro-detail on fabric and skin; realistic lighting, texture fidelity.\nBackground: the entire office pantry interior is rendered fully sharp with no blur —\nclean laminated cabinets, a water purifier, a microwave, simple white cups, an induction or kettle, minimal countertop appliances, and a neatly organized shelf area — all appearing crisp with full wide-depth focus.\nTone: clean, editorial, and realistic — a familiar yet refined office pantry atmosphere.\nFurniture Color & Material Rule:\nDo NOT generate wooden furniture of any kind — no wooden chairs, wooden tables, wooden shelves, wooden bar counters, or wooden accents.\nExclude all warm wood tones (light brown, dark brown, walnut, oak, pine).\nAll furniture and décor must follow the lounge’s premium palette:\n- brushed metal frames (matte black, brass, or silver)\n- upholstered fabric or velvet seating (dark gray, charcoal, deep beige, muted taupe)\n- polished composite or solid-colored stone tables (smooth surfaces without terrazzo patterns)\n- minimalistic glass or brass accents\n- no rustic textures, no wooden grains, no brown tones, no terrazzo patterns\nAny element that visually resembles wood or terrazzo must NOT appear in the scene.",
+          "Ultra-photorealistic indoor photograph of a Korean male model inside a cool-toned modern café with bright, crisp ambient lighting.\nPosture is stable and natural on a simple modern chair.\nLighting: cool-neutral indoor light (~5000–5500 K) producing clear, fresh highlights on the face and clothing.\nCaptured with Nikon D850 + 85mm.\nBackground: light gray walls, white tables, subtle metal accents — all rendered fully sharp with no blur.\nTone: clean, modern, and refreshing — airy cool-toned indoor atmosphere.\nFurniture Color & Material Rule:\nDo NOT generate wooden furniture of any kind — no wooden chairs, wooden tables, wooden shelves, wooden bar counters, or wooden accents.\nExclude all warm wood tones (light brown, dark brown, walnut, oak, pine).\nAll furniture and décor must follow the lounge’s premium palette:\n- brushed metal frames (matte black, brass, or silver)\n- upholstered fabric or velvet seating (dark gray, charcoal, deep beige, muted taupe)\n- polished composite or solid-colored stone tables (smooth surfaces without terrazzo patterns)\n- minimalistic glass or brass accents\n- no rustic textures, no wooden grains, no brown tones, no terrazzo patterns\nAny element that visually resembles wood or terrazzo must NOT appear in the scene.",
+          "Ultra-photorealistic indoor night portrait of model inside a modern lounge illuminated by warm accent lighting.\nLighting: soft glow (~3500–3800 K).\nCaptured with Nikon D850, ISO 400.\nSharp micro-detail.\nBackground: wall textures, furniture outlines, and lighting details are all fully sharp with no blur — complete depth clarity.\nTone: cinematic and intimate.\nFurniture Color & Material Rule:\nDo NOT generate wooden furniture of any kind — no wooden chairs, wooden tables, wooden shelves, wooden bar counters, or wooden accents.\nExclude all warm wood tones (light brown, dark brown, walnut, oak, pine).\nAll furniture and décor must follow the lounge’s premium palette:\n- brushed metal frames (matte black, brass, or silver)\n- upholstered fabric or velvet seating (dark gray, charcoal, deep beige, muted taupe)\n- polished composite or solid-colored stone tables (smooth surfaces without terrazzo patterns)\n- minimalistic glass or brass accents\n- no rustic textures, no wooden grains, no brown tones, no terrazzo patterns\nAny element that visually resembles wood or terrazzo must NOT appear in the scene.",
+        ],
+        outdoorPrompts: [
+          "Ultra-photorealistic daylight photograph of model walking along a modern Seoul street lined with glass storefronts and muted gray architecture, captured mid-step in a three-quarter profile.\nLighting: soft daylight (~5500 K) with realistic pavement reflections and shadow gradients.\nCaptured with a Nikon D850 and 85mm f/1.4 lens at ISO 100, daylight 5500 K, ultra-high-resolution (8K) look.\nSharp micro-detail on fabric and skin; realistic lighting, texture fidelity, and natural depth of field.\nBackground: all architectural elements, glass reflections, pavement textures, and storefront structures are rendered fully sharp with no blur — complete wide-depth detail.\nMood: effortless, alive, and editorial — like a real fashion lookbook moment.",
+          "Ultra-photorealistic candid shot of model standing beside a sleek glass-and-metal building, framed with balanced perspective lines.\nLighting: neutral daylight (~5400 K) with soft reflections across metal surfaces.\nCaptured with a Nikon D850 and 85mm f/1.4 lens at ISO 100.\nSharp micro-detail on fabric and skin.\nBackground: all geometric composition lines, building surfaces, and metal reflections rendered fully sharp with no blur — complete clarity.\nTone: professional, precise, and contemporary.",
+          "Ultra-photorealistic daylight photo of model walking in profile along a stone wall covered with creeping vines and subtle moss textures.\nLighting: soft directional daylight (~5500 K) with realistic contrast on stone and leaves.\nCaptured with Nikon D850 + 85mm f/1.4 lens at ISO 100.\nBackground: stone textures, vine details, moss patterns — all fully sharp with zero blur.\nMood: minimal, natural, editorial.",
+          "Ultra-photorealistic lifestyle photo of model walking through an outdoor café street with light stone pavement and frosted glass partitions.\nLighting: warm daylight (~5300 K).\nCaptured with Nikon D850 + 85mm lens at ISO 100.\nSharp micro-detail on fabric and skin.\nBackground: storefronts, planters, glass partitions, metal frames — all rendered fully sharp with complete depth clarity.\nTone: candid, warm, natural.",
+          "Ultra-photorealistic daylight photograph of model standing on a riverside promenade with silver railings and soft reflections on the water.\nLighting: soft natural daylight (~5400 K).\nCaptured with Nikon D850 + 85mm lens at ISO 100.\nSharp micro-detail on fabric and skin.\nBackground: railings, river surface, skyline, trees — every element is fully sharp, with no blur included.\nAtmosphere: calm, reflective, cinematic.",
+          "Ultra-photorealistic daylight editorial photo of model crossing a wide modern plaza with textured stone flooring and a minimalist building backdrop.\nLighting: clear daylight (~5500 K).\nCaptured with Nikon D850 + 85mm lens at ISO 100.\nSharp micro-detail.\nBackground: open plaza, stone patterns, minimalist buildings — all fully sharp, no blur.\nTone: modern, structured, confident.",
+          "Ultra-photorealistic daylight photograph of model walking along a park walkway bordered by low hedges and stone tiles.\nLighting: warm late-afternoon daylight (~5300 K).\nCaptured with Nikon D850 + 85mm lens at ISO 100.\nSharp micro-detail.\nBackground: hedges, trees, pathways, railings — all rendered fully sharp without any blur.\nMood: peaceful, organic.",
+          "Ultra-photorealistic daylight photograph of model standing on a quiet coastal walkway near the sea.\nLighting: warm daylight (~5300 K).\nCaptured with Nikon D850 + 85mm lens at ISO 100.\nSharp micro-detail.\nBackground: ocean surface, horizon, concrete railing — all fully sharp, no blur.\nTone: tranquil, cinematic.",
+          "Ultra-photorealistic night photograph of model standing on a quiet Seoul street illuminated by streetlights.\nLighting: warm artificial (~4000 K).\nCaptured with Nikon D850 + 85mm lens at ISO 400, f/2.0.\nSharp micro-detail.\nBackground: window reflections, pavement textures, storefront shapes — fully sharp with NO blur or bokeh.\nTone: cinematic, moody.",
+          "Ultra-photorealistic night photograph of model standing on a modern rooftop overlooking Seoul skyline.\nLighting: cool-white rooftop light (~4500 K) balanced with warm ambient city glow.\nCaptured with Nikon D850 + 85mm lens at ISO 320, f/1.8.\nSharp micro-detail.\nBackground: skyline, railing, rooftop structures — rendered fully sharp with no blur.\nTone: elegant, atmospheric.",
+          "Ultra-photorealistic daylight photograph of a Korean male model walking along a quiet Seongsu street with renovated red-brick buildings.\nLighting: soft natural daylight (~5500 K).\nCaptured with Nikon D850 + 85mm lens at ISO 100.\nSharp micro-detail.\nBackground: brick texture, metal frames, concrete pavement, plants — all fully sharp, no blur whatsoever.\nMood: clean, candid.",
+          "Ultra-photorealistic daylight photograph of a Korean male model walking through Seorae Village with soft cream-colored buildings.\nLighting: warm-neutral daylight (~5400 K).\nCaptured with Nikon D850 + 85mm lens.\nBackground: stucco walls, balconies, railings, greenery — all fully sharp, no blur.\nMood: bright, elegant.",
+          "Ultra-photorealistic daylight photograph of a Korean male model walking through a Yeonnam/Hongdae alley with cafés and pastel storefronts.\nLighting: bright daylight (~5500 K).\nCaptured with Nikon D850 + 85mm lens.\nBackground: cafés, brick textures, pastel storefronts, greenery — fully sharp, no blur.\nMood: youthful, lively.",
+          "Ultra-photorealistic daylight photograph of a Korean male model walking along a calm Hannam-dong residential street.\nLighting: soft daylight (~5500 K).\nCaptured with Nikon D850 + 85mm lens.\nBackground: modern beige and gray stone walls, landscaping, architectural lines — all fully sharp.\nMood: premium, subtle.",
+          "Ultra-photorealistic daylight photograph of a Korean male model walking near the Apgujeong Galleria district.\nLighting: crisp daylight (~5500 K).\nCaptured with Nikon D850 + 85mm lens.\nBackground: glass buildings, polished paths — all fully sharp, no blur.\nMood: modern, stylish.",
+          "Ultra-photorealistic daylight photograph of a Korean male model walking between tall glass-covered office buildings in Gwanghwamun.\nLighting: bright daylight (~5500 K).\nCaptured with Nikon D850 + 85mm lens.\nBackground: glass panels, steel frames, stone walkways — fully sharp clarity.\nMood: dynamic, clean, modern.",
+          "Ultra-photorealistic daylight photograph of a Korean male model walking along a Han River pathway.\nLighting: warm natural daylight (~5300–5500 K).\nCaptured with Nikon D850 + 85mm lens.\nBackground: river reflections, railings, pavement — all sharp, zero blur.\nMood: quiet, cinematic.",
+          "Ultra-photorealistic daylight photograph of a Korean male model walking down wide outdoor steps made of warm-tone light stone.\nLighting: warm daylight (~5300–5500 K).\nCaptured with Nikon D850 + 85mm lens.\nBackground: steps, stone textures, railings, greenery — all fully sharp.\nMood: calm, natural.",
+          "Ultra-photorealistic daylight photograph of a Korean male model walking down concrete stairs beside a glass building façade.\nLighting: daylight (~5500 K).\nCaptured with Nikon D850 + 85mm lens.\nBackground: glass panels, concrete surfaces, sky reflections — all fully sharp, no blur.\nMood: dynamic, fashionable.",
+          "Ultra-photorealistic indoor holiday photograph of a Korean male model standing inside a Christmas installation hall inspired by The Hyundai Seoul.\nLighting: soft neutral-white indoor lighting (~4200–4800 K) with gentle reflections on polished stone flooring.\nCaptured with a Nikon D850 and 85mm f/1.4 lens at ISO 200, ultra-high-resolution (8K) look.\nExpression: The model displays a bright, genuine smile with wide, cheerful eyes and slightly lifted corners of the mouth — joyful, warm, and expressive.\nBackground: Modern Christmas installation in white, silver, champagne gold, and soft beige\nSculptural décor (large ornaments, abstract tree structures, minimal ribbons)\nGlass, metal, and acrylic architectural elements\nPale cream or gray polished stone flooring\nEntire background rendered fully sharp with no blur\nNo readable signage, no text, no visible shoppers (silhouettes allowed only if fully unrecognizable)\nVisual Rules:\nAvoid classic red-green overload\nAvoid rustic wood, clutter, or cartoonish props\nAll decorations must be luxury-modern, symmetrical, and minimal\nMood: Serene, luxurious, modern — the refined winter ambiance unique to The Hyundai Seoul, enhanced by the model’s bright, cheerful smile.",
+        ],
+        sittingActions: [
+          "holding a cup with both hands while gazing out the window softly",
+          "resting one arm on the table, the other hand touching his chin",
+          "running his fingers through his hair gently while seated near the window, looking straight ahead",
+          "looking down at his phone with a faint relaxed smile, holding it with one hand",
+          "holding a book or magazine open on his lap, glancing at a page",
+          "placing one hand lightly at his side, the other resting on his lap",
+          "crossing his legs casually, leaning back slightly in the chair",
+          "holding a coffee cup mid-sip, eyes focused outside the frame",
+          "folding his hands together on the table, expression calm and focused",
+          "lightly brushing the edge of the table while lost in thought",
+          "resting his head briefly on one hand as sunlight touches his face",
+          "touching the rim of his cup idly while waiting",
+          "raising one hand slightly in a natural mid-gesture of conversation",
+          "holding his phone loosely with one hand while smiling faintly",
+          "turning his head slightly toward someone off-frame",
+          "adjusting his collar gently while seated in soft light",
+          "sitting at an open laptop, viewed from the side, adjusting sleeve cuff or scrolling with calm concentration.",
+          "holding his smartphone with one hand while taking a mirror photo in front of a clean full-length café mirror; looking directly at his reflection with a calm, natural expression.",
+        ],
+        standingActions: [
+          "running his hand through his hair naturally as sunlight catches his profile",
+          "adjusting the cuff of his sleeve while walking calmly",
+          "buttoning his jacket with a composed expression under soft daylight",
+          "checking his phone casually while mid-step",
+          "holding a coffee cup lightly while standing near a wall",
+          "turning his head slightly toward the light with a relaxed gaze",
+          "placing one hand in his pocket while looking to the side",
+          "straightening his collar gently, wind moving his hair",
+          "lifting his chin slightly as if feeling the breeze",
+          "fixing the strap of a bag slung over one shoulder while walking",
+          "folding his arms lightly and gazing into the distance",
+          "adjusting his watch while standing casually",
+          "holding a folded magazine loosely in one hand",
+          "resting one hand against the wall beside him while looking away",
+          "tilting his head slightly upward under warm sunlight",
+          "touching his neck naturally, appearing thoughtful",
+          "reaching up to fix his hair while glancing to the side",
+          "putting both hands in his pockets, shifting his weight to one leg",
+          "holding his phone to his ear, mid-conversation with a subtle smile",
+          "leaning casually against a railing, one foot placed naturally on a higher step, gaze slightly upward.",
+          "holding his smartphone with one hand, taking a mirror-style photo through a reflective surface such as a polished building glass panel, looking directly at the reflection with a natural relaxed posture.",
+          "tilting his body about 20 degrees to the side while raising one hand to make a relaxed V-sign near his face, smiling brightly with eyes slightly curved, gaze directed toward the camera",
+        ],
+        combinedPrompts: [
+          "Scene: pastel studio backdrop (blue, mint, or cream) \nAction: Model standing neutrally; shadows from multiple angles appear naturally.\nCamera: Full-body.\nFraming: Strong contour shadows but outfit details remain visible.\nMood: Artistic, cinematic, premium brand vibe.",
+          "Scene: pastel studio backdrop (cream) \nAction: Model turns his head slightly toward the camera over his shoulder.\nCamera: Side-angle at chest height.\nFraming: Half-body.\nMood: Artistic, cinematic, premium brand vibe.",
+          "Scene: Scene: A minimal bench positioned along a beach walkway facing an open ocean horizon at sunset. \nWarm orange and pink sunlight reflects across the water, creating a soft gradient sky. \nThe sea is clearly visible behind the bench with gentle waves, and the scene is uncluttered and calm. \nOverall lighting is warm, cinematic, and evenly spread, highlighting the model without overpowering the clothing.\nAction: Model sits, leans back slightly, tilts head upward.\nCamera: Slight top-down angle, 1 m distance.\nFraming: Half-body or 2/3 body; outfit remains cleanly visible.\nMood: Relaxed, youthful, editorial.",
+        ],
+      };
+
+      // Base Prompt와 Product Instruction (인라인 포함)
+      const basePrompt = `**creates an image so that it comes out from the tip of your toes to your neck**
+
+[Ethnicity Constraint]
+Generate the model as an East Asian (Korean) male in his 30s.
+He must have authentic Korean facial features — black hair, East Asian eye shape, natural jawline, and warm beige skin tone.
+Do not generate Western, Caucasian, or European facial traits under any circumstances.
+
+[System Overview]
+This system generates a new image of a Korean male model wearing a provided clothing item,
+using text-to-image generation with a reference product photo.
+The model and environment must be created entirely from scratch,
+but the clothing must accurately replicate the color, texture, fabric, and design of the provided product image.
+All results must appear ultra-photorealistic, as if captured in a professional fashion lookbook photoshoot.
+
+[Outfit Rendering Rules]
+- The clothing worn by the model must be identical to the provided product image —
+  same color, material, weave, thickness, sheen, stitching, buttons, prints, and logo placement.
+- Do not restyle, recolor, or reinterpret the garment.
+- Fit the clothing naturally to the model’s body while keeping the original proportions and details intact.
+- Fabric behavior must appear physically correct — realistic gravity, folds, wrinkles, seams, and shading.
+- All shadows, reflections, and light direction must match the overall lighting of the scene.
+- If the product image includes a person, use only the garment information (color, pattern, texture);
+  completely disregard the face, body, or identity of that person.
+- For multi-layer outfits (e.g., shirt + jacket + coat):
+  render in strict inner → outer order, maintaining correct occlusion between garments.
+- Lighting must preserve accurate color reproduction;
+  no exposure shifts or white-balance changes that alter the product’s tone.
+- The final image must satisfy both fashion-editorial realism and e-commerce product accuracy.
+
+[Layered Outfit Rendering]
+- Multiple Top items may exist (e.g., shirt + knit + jacket).
+- Any item with sub_type:"shirt" is the inner top layer.
+- Render strictly inner → outer:
+  1) Render the inner shirt first, keep naturally visible areas (collar, cuffs, hem).
+  2) Overlay outer garments (sweater/jacket/coat) on top with correct occlusion.
+- No blending, transparency, or melting; each garment keeps its own texture, lighting, and wrinkles.
+- Recalculate contact shadows to reflect physical stacking.
+
+[Cloth Quality & Texture Fidelity]
+- Reproduce the product image EXACTLY: color, material, texture, weave, thickness, sheen, stitching, buttons, prints, and logos must match the source.
+- No hue, saturation, or exposure changes; no tone mapping or artistic restyle.
+- Avoid warping, distortion, stretching, or soft blur; edges and seams must remain sharp and photographic.
+
+[Product Integrity & Visual Fidelity]
+- These garments are official product images used for commercial display.
+  They must be reproduced exactly as provided, without any alteration of style or color.
+- Pixel-level fidelity is required — maintain the product’s original hue, fabric texture, and surface detail.
+- Do not stretch, distort, or blur the clothing.
+- Use minimal perspective warp only if necessary for a natural fit.
+- Ensure all shadows and highlights align with the lighting direction but do not override garment texture.
+- Edges must remain crisp, with no bleeding or smudging into background areas.
+- Any deviation in product color, texture, or proportion is considered a failure.
+
+[Masking & Compositing Rules]
+- Use explicit masks per garment if provided.
+- Apply layers: inner shirt → mid top(s) → outer top → bottom → shoes.
+- Edge feather 2–4 px (max 6 px). No bleed beyond mask boundaries.
+- Preserve original color and luminance inside garment regions.
+- Keep collars, cuffs, and hems visible only where naturally exposed; remove logos fully occluded by outer layers.
+- Do not affect skin, hair, or background.
+- Maintain garment scale relative to shoulders, chest, and waist landmarks.
+
+[Rendering Priorities]
+1) Product integrity and color/texture fidelity
+2) East Asian (Korean) ethnicity constraint (no Western features)
+3) Layered outfit rendering and physical realism
+4) Lighting and shadow consistency
+5) Natural alignment of new clothing
+
+[Negative Constraints]
+western face, caucasian, european features, white male, foreigner, large nose bridge, deep eye sockets, pale skin, blond hair, brown hair, blue eyes,
+identity change, new face generation with Western traits, non-Korean facial structure,
+duplicate person, two people, multiple people, second person, twin, couple, group, crowd,
+reflection of person, background people, mannequin, printed human, human poster, doll,
+same person as in product photo, reuse of product photo model, face from product image,
+melted clothing, over-blended textures, watercolor, oversmoothed, color shift, hue shift, tone mapping,
+text, watermark, signage, logo (unless present on the provided garment image only), sitting on a table, sitting on a desk, putting feet on a chair, putting feet on furniture,  
+standing on furniture, crouching on a chair, kneeling on a chair, squatting posture,  
+awkward seated angles, distorted sitting proportions, oversized head ratio,  
+leaning too far forward, bending torso excessively, unrealistic limb positions
+
+[Identity & Scene Rules]
+- The model must be a realistic 30-something Korean man with natural facial structure and balanced proportions.
+  (black hair, East Asian eye shape, warm beige to neutral skin tone, lean to medium build)
+- Pose: natural and relaxed — standing or leaning casually, hands in pockets or at sides.
+  No exaggerated or stylized poses.
+- Lighting: soft daylight (~5500 K) that highlights the outfit’s true color and fabric texture.
+- Background: modern Korean setting — minimal studio, clean architectural wall, or urban street aesthetic.
+  No other people, reflections, posters, mannequins, or human silhouettes.
+- Composition: primarily half-body or knee-up framing, vertical 4:5 ratio (e.g., 648 × 810 px).  
+  The model should appear centered and naturally framed within the image.
+- Absolutely no text, signage, watermarks, or graphic overlays anywhere in the image.
+- If any human figure or face appears in the provided product photo, ignore it completely.
+  Do not reuse or reproduce that person’s appearance.
+
+[Lighting & Composition Consistency]
+- Lighting temperature ≈ 5500 K (neutral daylight).
+- Maintain consistent contrast and realistic micro-shading between clothing, skin, and background.
+- Background and subject depth must look physically accurate with natural soft shadows.
+- Final framing: vertical portrait (4:5 aspect ratio, 648 × 810 px).
+  Do not crop or resize in a way that alters proportions.
+`;
+
+      const productInstruction = `Generate exactly one Korean male model only — ignore any human figure in the product image.
+Ultra-photorealistic fashion lookbook photo of a 30-something Korean male model wearing the provided clothing item.
+If any human figure or face appears in the input image, ignore it completely.
+Do NOT reuse or replicate that person's face or body.
+Focus only on the garment's color, texture, and design.
+Generate a new Korean model with natural black hair and warm-beige skin, in a realistic pose.
+Lighting: soft daylight (~5500K). No text, watermark, or additional people.`;
+
+      // 전역 변수: JSON 데이터
+      let jsonData = null;
+
+      // JSON 파싱 처리
+      window.parseJson = function () {
+        const jsonInput = document.getElementById("jsonInput").value.trim();
+
+        if (!jsonInput) {
+          showStatus("error", "JSON 입력이 비어있습니다.");
+          jsonData = null;
+          document.getElementById("productInfo").classList.add("hidden");
+          return;
+        }
+
+        try {
+          jsonData = JSON.parse(jsonInput);
+          extractProductInfo(jsonData);
+          showStatus("success", "✓ JSON 파싱 완료!");
+        } catch (error) {
+          showStatus("error", `JSON 파싱 오류: ${error.message}`);
+          jsonData = null;
+          document.getElementById("productInfo").classList.add("hidden");
+        }
+      };
+
+      function extractProductInfo(data) {
+        const products = data.products || {};
+        const productInfoDiv = document.getElementById("productInfo");
+        const productListDiv = document.getElementById("productList");
+
+        if (
+          !products ||
+          (Array.isArray(products) && products.length === 0) ||
+          (typeof products === "object" && Object.keys(products).length === 0)
+        ) {
+          productInfoDiv.classList.add("hidden");
+          return;
+        }
+
+        let productList = [];
+
+        // products가 리스트인 경우
+        if (Array.isArray(products)) {
+          products.forEach((product) => {
+            if (product.type && product.sub_type) {
+              const fit = product.fit ? ` (${product.fit})` : "";
+              productList.push(`${product.type}: ${product.sub_type}${fit}`);
+            }
+          });
+        }
+        // products가 딕셔너리인 경우
+        else if (typeof products === "object") {
+          Object.entries(products).forEach(([key, product]) => {
+            if (product && product.sub_type) {
+              const fit = product.fit ? ` (${product.fit})` : "";
+              productList.push(
+                `${key.toUpperCase()}: ${product.sub_type}${fit}`
+              );
+            }
+          });
+        }
+
+        if (productList.length > 0) {
+          productListDiv.innerHTML = productList
+            .map((p) => `• ${p}`)
+            .join("<br>");
+          productInfoDiv.classList.remove("hidden");
+        } else {
+          productInfoDiv.classList.add("hidden");
+        }
+      }
+
+      // 프롬프트 모드 변경 시 UI 업데이트
+      document
+        .getElementById("promptMode")
+        .addEventListener("change", function () {
+          const mode = this.value;
+          const separateSettings = document.getElementById(
+            "separateModeSettings"
+          );
+          const combinedSettings = document.getElementById(
+            "combinedModeSettings"
+          );
+
+          if (mode === "separate") {
+            separateSettings.classList.remove("hidden");
+            combinedSettings.classList.add("hidden");
+          } else {
+            separateSettings.classList.add("hidden");
+            combinedSettings.classList.remove("hidden");
+          }
+        });
+
+      // 랜덤 체크박스 토글
+      ["appearance", "background", "action", "combined"].forEach((type) => {
+        const checkbox = document.getElementById(`${type}Random`);
+        const input = document.getElementById(`${type}Index`);
+
+        checkbox.addEventListener("change", function () {
+          input.disabled = this.checked;
+          if (this.checked) {
+            input.value = "";
+          }
+        });
+      });
+
+      // 촬영 구도 프롬프트 반환
+      function getShotTypePrompt(shotType) {
+        const shotPrompts = {
+          full_body: "",
+          below_knee: `
+Framing: **portrait three-quarter shot (knees-up)**, clearly showing lower body and torso — not full-body, no full-body view, knees-up only.
+Camera: 85mm f/1.4 lens at ISO 100, aperture f/2.0 for natural background blur, ultra-high-resolution (8K look).
+Composition: centered subject, captured from knees-up with balanced torso-to-legs ratio.
+`,
+          above_knee: `
+Framing: **portrait medium shot (waist-up)**, clearly showing torso and face — not full-body, no full-body view, waist-up only.
+Camera: 85mm f/1.4 lens at ISO 100, aperture f/2.0 for natural background blur, ultra-high-resolution (8K look).
+Composition: centered subject, captured from waist-up with balanced head-to-torso ratio.
+`,
+        };
+        return shotPrompts[shotType] || "";
+      }
+
+      // 랜덤 선택
+      function randomChoice(array) {
+        return array[Math.floor(Math.random() * array.length)];
+      }
+
+      // 제품 정보 텍스트 생성
+      function generateProductText(data) {
+        if (!data || !data.products) return "";
+
+        const products = data.products;
+        const productDescriptions = [];
+
+        // products가 리스트인 경우
+        if (Array.isArray(products)) {
+          products.forEach((product) => {
+            if (product.type && product.sub_type) {
+              productDescriptions.push(
+                `${product.type.toUpperCase()}: ${
+                  product.sub_type
+                } (1 image showing different angles)`
+              );
+            }
+          });
+        }
+        // products가 딕셔너리인 경우
+        else if (typeof products === "object") {
+          Object.entries(products).forEach(([key, product]) => {
+            if (product && product.sub_type) {
+              const imageCount =
+                product.additional_images &&
+                Array.isArray(product.additional_images)
+                  ? product.additional_images.length + 1
+                  : 1;
+              productDescriptions.push(
+                `${key.toUpperCase()}: ${product.sub_type} `
+              );
+            }
+          });
+        }
+
+        if (productDescriptions.length === 0) return "";
+
+        const productsText = productDescriptions.join("\n");
+        const productCount = Array.isArray(products)
+          ? products.length
+          : Object.keys(products).length;
+
+        return `Product Information:
+${productsText}
+
+Note: The images above show ${productCount} products from multiple angles. Each product should be worn together on the same model.`;
+      }
+
+      // 상태 메시지 표시
+      function showStatus(type, message) {
+        const statusEl = document.getElementById("status");
+        statusEl.className = `status ${type}`;
+        statusEl.textContent = message;
+        statusEl.classList.remove("hidden");
+      }
+
+      // 프롬프트 생성
+      window.generatePrompt = function () {
+        const mode = document.getElementById("promptMode").value;
+        const shotType = document.getElementById("shotType").value;
+        const appearanceRandom =
+          document.getElementById("appearanceRandom").checked;
+        const appearanceIndex =
+          parseInt(document.getElementById("appearanceIndex").value) || null;
+
+        let selectedAppearance;
+        let appearanceIdx;
+        if (appearanceRandom || appearanceIndex === null) {
+          selectedAppearance = randomChoice(promptData.appearances);
+          appearanceIdx = promptData.appearances.indexOf(selectedAppearance);
+        } else {
+          if (
+            appearanceIndex < 0 ||
+            appearanceIndex >= promptData.appearances.length
+          ) {
+            alert(
+              `외모 프롬프트 인덱스 범위 오류: 0-${
+                promptData.appearances.length - 1
+              } 사이여야 합니다`
+            );
+            return;
+          }
+          selectedAppearance = promptData.appearances[appearanceIndex];
+          appearanceIdx = appearanceIndex;
+        }
+
+        let selectedPrompt;
+        let promptInfo = [];
+
+        if (mode === "combined") {
+          // Combined 모드
+          const combinedRandom =
+            document.getElementById("combinedRandom").checked;
+          const combinedIndex =
+            parseInt(document.getElementById("combinedIndex").value) || null;
+
+          let selectedCombined;
+          let combinedIdx;
+          if (combinedRandom || combinedIndex === null) {
+            selectedCombined = randomChoice(promptData.combinedPrompts);
+            combinedIdx = promptData.combinedPrompts.indexOf(selectedCombined);
+            promptInfo.push(`합쳐진 프롬프트: 랜덤 (인덱스 ${combinedIdx})`);
+          } else {
+            if (
+              combinedIndex < 0 ||
+              combinedIndex >= promptData.combinedPrompts.length
+            ) {
+              alert(
+                `합쳐진 프롬프트 인덱스 범위 오류: 0-${
+                  promptData.combinedPrompts.length - 1
+                } 사이여야 합니다`
+              );
+              return;
+            }
+            selectedCombined = promptData.combinedPrompts[combinedIndex];
+            combinedIdx = combinedIndex;
+            promptInfo.push(`합쳐진 프롬프트: 인덱스 ${combinedIdx}`);
+          }
+
+          selectedPrompt = `${selectedAppearance}\n\n${selectedCombined}`;
+        } else {
+          // Separate 모드
+          const backgroundType =
+            document.getElementById("backgroundType").value;
+          const backgroundRandom =
+            document.getElementById("backgroundRandom").checked;
+          const backgroundIndex =
+            parseInt(document.getElementById("backgroundIndex").value) || null;
+          const actionRandom = document.getElementById("actionRandom").checked;
+          const actionIndex =
+            parseInt(document.getElementById("actionIndex").value) || null;
+
+          // 배경 타입 결정
+          let isIndoor;
+          if (backgroundType === "indoor") {
+            isIndoor = true;
+          } else if (backgroundType === "outdoor") {
+            isIndoor = false;
+          } else {
+            isIndoor = Math.random() < 0.5;
+          }
+
+          const backgroundList = isIndoor
+            ? promptData.indoorPrompts
+            : promptData.outdoorPrompts;
+          const actionList = isIndoor
+            ? promptData.sittingActions
+            : promptData.standingActions;
+
+          // 배경 프롬프트 선택
+          let selectedBackground;
+          let backgroundIdx;
+          if (backgroundRandom || backgroundIndex === null) {
+            selectedBackground = randomChoice(backgroundList);
+            backgroundIdx = backgroundList.indexOf(selectedBackground);
+            promptInfo.push(
+              `배경: ${
+                isIndoor ? "실내" : "실외"
+              } (랜덤, 인덱스 ${backgroundIdx})`
+            );
+          } else {
+            if (
+              backgroundIndex < 0 ||
+              backgroundIndex >= backgroundList.length
+            ) {
+              alert(
+                `배경 프롬프트 인덱스 범위 오류: 0-${
+                  backgroundList.length - 1
+                } 사이여야 합니다`
+              );
+              return;
+            }
+            selectedBackground = backgroundList[backgroundIndex];
+            backgroundIdx = backgroundIndex;
+            promptInfo.push(
+              `배경: ${isIndoor ? "실내" : "실외"} (인덱스 ${backgroundIdx})`
+            );
+          }
+
+          // 행동 프롬프트 선택
+          let selectedAction;
+          let actionIdx;
+          if (actionRandom || actionIndex === null) {
+            selectedAction = randomChoice(actionList);
+            actionIdx = actionList.indexOf(selectedAction);
+            promptInfo.push(`행동: 랜덤 (인덱스 ${actionIdx})`);
+          } else {
+            if (actionIndex < 0 || actionIndex >= actionList.length) {
+              alert(
+                `행동 프롬프트 인덱스 범위 오류: 0-${
+                  actionList.length - 1
+                } 사이여야 합니다`
+              );
+              return;
+            }
+            selectedAction = actionList[actionIndex];
+            actionIdx = actionIndex;
+            promptInfo.push(`행동: 인덱스 ${actionIdx}`);
+          }
+
+          selectedPrompt = `${selectedAppearance}\n\n${selectedBackground}\n\naction: ${selectedAction}`;
+
+          // 촬영 구도 추가 (separate 모드일 때만)
+          let finalShotType = shotType;
+          if (shotType === "random") {
+            finalShotType = randomChoice([
+              "full_body",
+              "below_knee",
+              "above_knee",
+            ]);
+          }
+
+          const shotPrompt = getShotTypePrompt(finalShotType);
+          if (shotPrompt) {
+            selectedPrompt += shotPrompt;
+            promptInfo.push(`촬영 구도: ${finalShotType}`);
+          } else {
+            promptInfo.push(`촬영 구도: full_body`);
+          }
+        }
+
+        // 외모 프롬프트 정보 추가
+        promptInfo.unshift(
+          `외모 프롬프트: ${
+            appearanceRandom ? "랜덤" : "인덱스 " + appearanceIndex
+          } (실제: ${appearanceIdx})`
+        );
+
+        // 전체 프롬프트 조합 (Python 코드와 동일한 형식)
+        let fullPrompt = "";
+
+        // === Python과 동일한 출력 형식 ===
+
+        // [1] Base Prompt (유의사항)
+        fullPrompt += "[1] Base Prompt (유의사항):\n";
+        fullPrompt += basePrompt + "\n\n";
+        fullPrompt += "-".repeat(80) + "\n\n";
+
+        // [2] 제품 이미지 (JSON이 있는 경우)
+        if (jsonData && jsonData.products) {
+          const products = jsonData.products;
+          let productCount = 0;
+          let productImageInfo = [];
+
+          if (Array.isArray(products)) {
+            productCount = products.length;
+            products.forEach((product) => {
+              if (product.type && product.sub_type) {
+                productImageInfo.push(
+                  `  - ${product.type.toLowerCase()}: ${product.sub_type} (1장)`
+                );
+              }
+            });
+          } else if (typeof products === "object") {
+            productCount = Object.keys(products).length;
+            Object.entries(products).forEach(([key, product]) => {
+              if (product && product.sub_type) {
+                const imageCount =
+                  product.additional_images &&
+                  Array.isArray(product.additional_images)
+                    ? product.additional_images.length + 1
+                    : 1;
+                productImageInfo.push(`  - ${key}: ${product.sub_type}`);
+              }
+            });
+          }
+
+          fullPrompt += `[2] 제품 이미지: ${productCount}개\n`;
+          fullPrompt += productImageInfo.join("\n") + "\n\n";
+          fullPrompt += "-".repeat(80) + "\n\n";
+
+          // [3] 제품 설명
+          const productText = generateProductText(jsonData);
+          if (productText) {
+            fullPrompt += "[3] 제품 설명:\n";
+            const lines = productText.split("\n");
+            // "Product Information:" 제목 제거하고 실제 내용만 추가
+            const contentLines = lines.filter(
+              (line) =>
+                line.trim() &&
+                !line.includes("Product Information:") &&
+                !line.includes("Note: The images above")
+            );
+            fullPrompt += contentLines.join("\n") + "\n\n";
+            fullPrompt += "-".repeat(80) + "\n\n";
+            promptInfo.push(`제품 정보: 포함됨 (${productCount}개)`);
+          }
+        }
+
+        // [4] 제품 처리 지시사항
+        const instructionNumber = jsonData && jsonData.products ? "[4]" : "[2]";
+        fullPrompt += `${instructionNumber} 제품 처리 지시사항:\n`;
+        fullPrompt += productInstruction + "\n\n";
+        fullPrompt += "-".repeat(80) + "\n\n";
+
+        // [5] 메인 프롬프트
+        const mainPromptNumber = jsonData && jsonData.products ? "[5]" : "[3]";
+        fullPrompt += `${mainPromptNumber} 메인 프롬프트:\n`;
+        fullPrompt += selectedPrompt + "\n";
+        fullPrompt += "=" + "=".repeat(79) + "\n";
+
+        // 결과 표시
+        document.getElementById("resultPrompt").value = fullPrompt;
+        document.getElementById("promptInfo").innerHTML = promptInfo
+          .map((info) => `• ${info}`)
+          .join("<br>");
+
+        // 성공 메시지
+        showStatus("success", "✓ 프롬프트 생성 완료!");
+      };
+
+      // 클립보드에 복사
+      window.copyPrompt = function () {
+        const textarea = document.getElementById("resultPrompt");
+        const text = textarea.value.trim();
+
+        if (!text) {
+          alert("복사할 프롬프트가 없습니다.");
+          return;
+        }
+
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+          navigator.clipboard
+            .writeText(text)
+            .then(() => {
+              const btn = event.target;
+              const originalText = btn.textContent;
+              btn.textContent = "✓ 복사 완료!";
+              btn.classList.add("copied");
+
+              setTimeout(() => {
+                btn.textContent = originalText;
+                btn.classList.remove("copied");
+              }, 2000);
+            })
+            .catch((err) => {
+              alert("클립보드 복사 실패: " + err.message);
+            });
+        } else {
+          // Fallback for older browsers
+          textarea.select();
+          document.execCommand("copy");
+          alert("클립보드에 복사되었습니다.");
+        }
+      };
+
+      // 초기 상태 표시
+      showStatus("success", "✓ 프롬프트 데이터 로드 완료");
+    </script>
+  </body>
+</html>
