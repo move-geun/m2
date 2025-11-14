@@ -1,0 +1,39 @@
+# Vercel 배포 시 제외할 파일들
+
+# Python 관련
+.venv/
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+env/
+venv/
+*.py
+
+# 환경 변수
+.env
+.env.local
+
+# 입출력 폴더
+outputs/
+outputs2/
+outputs3/
+model_inputs/
+style_inputs/
+
+# 원본 프롬프트 파일 (index.html에 포함됨)
+prompts/
+prompts_json/
+m3_prompts/
+
+# 테스트 및 문서
+try/
+README*.md
+requirements.txt
+prompt_output.txt
+
+# 기타
+public/
+prompt_builder.html
+
